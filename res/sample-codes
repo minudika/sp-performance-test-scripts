@@ -1,0 +1,4 @@
+./client.sh /home/minudika/Projects/WSO2/dev/performance-test 1000 1 1000 120000 1 5 192.168.57.248 9892 ubuntu 192.168.57.25 9892 ubuntu
+
+
+
