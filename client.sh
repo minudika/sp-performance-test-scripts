@@ -57,6 +57,7 @@ readonly PRODUCT_HOME="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}"
 readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
 
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
+readonly CLIENT_DIR_NAME="clients"
 readonly SIDDHI_APP_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
 readonly PERFORMANCE_RESULTS_REPO=git@github.com:minudika/sp-performance-test-results.git
 
@@ -220,7 +221,7 @@ echo "Waiting until siddhi app getting deployed on server ${REMOTE_IP2}.."
 while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
     https://${REMOTE_IP2}:${SERVER_2_HTTPS_PORT}/${SIDDHI_APP_STATUS_REST_PATH}\
-     -H "accept: application/json"
+     -H "accept: application/json"\
      -u admin:admin -k)
 
     sleep 1
@@ -234,7 +235,7 @@ sleep 5
 execute_client() {
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
 
-    cd /home/minudika/Projects/WSO2/pack/sp/4.3.0/rc3/wso2sp-4.3.0/samples/sample-clients/tcp-client/target
+    cd ${CLIENT_DIR}/${ARTIFACT_REPO_NAME}/${CLIENT_DIR_NAME}
     echo "[${current_date_time}] Executing tcp client.."
     java \
         -Dhost=${REMOTE_IP1}\
@@ -260,7 +261,6 @@ main() {
    download_results
    summarize
    push_results_to_git
-   clean_servers
    clean_servers
 }
 
