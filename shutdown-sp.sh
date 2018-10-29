@@ -40,11 +40,11 @@ readonly LIB_DIR="${INSTALLATION_DIR}/${SIDDHI_APP_REPO_NAME}/libs"
 clean() {
     rm -rf ${PRODUCT_HOME}/wso2/worker/performance-results
     rm -f ${SIDDHI_APP_DEPLOYMENT_DIR}/TCP_Benchmark.siddhi
-    echo "siddhi app and performance results removed from the worker."
+    echo "Siddhi app and performance results removed from the worker."
 }
 
 shutdown_server() {
-    echo "shutting down wso2 stream processor.."
+    echo "Shutting down wso2 stream processor.."
     export JAVA_HOME=${JAVA_HOME_PATH}
     cd ${PRODUCT_HOME}/bin
     sh worker.sh stop
@@ -52,7 +52,6 @@ shutdown_server() {
 
 main() {
     shutdown_server
-    #clean
 }
 
 main

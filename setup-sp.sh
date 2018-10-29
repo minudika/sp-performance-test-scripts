@@ -75,7 +75,7 @@ clone_artifacts() {
 }
 
 setup_mysql_database() {
-    echo "setting up database"
+    echo "setting up mysql database"
     mysql -u root -proot -e "CREATE DATABASE StreamProcessor; USE StreamProcessor;"
 }
 
@@ -93,6 +93,7 @@ copy_mysql_insert_siddhiApp() {
 copy_mysql_update_siddhiApp() {
     cd ${SIDDHI_APP_DIR}
     cp "Persistence/Mysql/Update/TCP_Benchmark.siddhi" ${SIDDHI_APP_DEPLOYMENT_DIR}
+    setup_mysql_database
 }
 
 copy_mssql_insert_siddhiApp() {

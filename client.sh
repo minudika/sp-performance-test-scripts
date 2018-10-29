@@ -106,23 +106,20 @@ clone_artifacts() {
     git clone ${SIDDHI_APP_REPO_URL}
 }
 
-start_sever_1() {
-    echo "starting the server ${REMOTE_IP1}.."
+start_severs() {
+    echo "Starting the server ${REMOTE_IP1}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./setup-sp.sh ${SCENARIO}
-}
 
-start_sever_2() {
-    echo "starting the server ${REMOTE_IP2}.."
+    echo "Starting the server ${REMOTE_IP2}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./setup-sp.sh ${SCENARIO}
 }
 
-shutdown_server_1() {
-    echo "shutting down the server.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./shutdown-sp.sh
-}
 
-shutdown_server_2() {
-    echo "shutting down the server.."
+shutdown_servers() {
+    echo "Shutting down the server ${REMOTE_IP1}.."
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./shutdown-sp.sh
+
+    echo "Shutting down the server ${REMOTE_IP2}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./shutdown-sp.sh
 }
 
@@ -131,7 +128,7 @@ download_results() {
     mkdir ${DOWNLOAD_DIR_NAME}
     cd ${DOWNLOAD_DIR_NAME}
     mkdir ${SCENARIO}
-    echo "downloading result set.."
+    echo "Downloading result set from ${REMOTE_IP1}.."
     sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:/home/ubuntu/wso2sp-4.3.0/wso2/worker/performance-results/ \
     ${DOWNLOAD_PATH}/${SCENARIO}
 }
@@ -141,7 +138,7 @@ create_summary_file() {
     ${ENTIRE_THROUGHPUT},${ENTIRE_AVG_LATENCY},${AVG_LATENCY_90},${AVG_LATENCY_95},${AVG_LATENCY_99}"
 
     if [ ! -f ${SUMMARY_FILE_PATH} ]; then
-        echo "creating summary file"
+        echo "Creating summary file"
         echo "${header}" >> ${SUMMARY_FILE_PATH}
     fi
 }
@@ -177,7 +174,7 @@ case ${SCENARIO} in
 
     create_summary_file
 
-    echo "summarizing performance results of ${scenario_name} test.."
+    echo "Summarizing performance results of ${scenario_name} test.."
     while IFS=, read -r col0 col1 col2 col3 col4 col5 col6 col7 col8 col9 col10 col11 col12 col13
     do
         value="${scenario_name},${BATCH_SIZE},${WINDOW_SIZE},${col3},${col4},${col2},${col7},${col8},${col9},${col10}"
@@ -193,22 +190,20 @@ push_results_to_git() {
     git remote add origin ${PERFORMANCE_RESULTS_REPO}
     git add -A
     git commit -m "${current_date_time} : Add performance results" -m "Test duration : ${TEST_DURATION}"
-    echo "${current_date_time}: pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
+    echo "${current_date_time}: Pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
     git push -u origin master
 }
 
-clean_server_1() {
-    echo "removing performance results and siddhi apps from worker ${REMOTE_IP1}.."
+clean_servers() {
+    echo "Removing performance results and siddhi apps from worker ${REMOTE_IP1}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./clean.sh
-}
 
-clean_server_2() {
-    echo "removing performance results and siddhi apps from worker ${REMOTE_IP2}.."
+    echo "Removing performance results and siddhi apps from worker ${REMOTE_IP2}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./clean.sh
 }
 
-wait_until_deploy_on_server_1() {
-echo "waiting until siddhi app getting deployed on server ${REMOTE_IP1}.."
+wait_until_deploy_on_servers() {
+echo "Waiting until siddhi app getting deployed on server ${REMOTE_IP1}.."
 while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
     https://${REMOTE_IP1}:${SERVER_1_HTTPS_PORT}/${SIDDHI_APP_STATUS_REST_PATH}\
@@ -218,12 +213,10 @@ while
     sleep 1
     ((${status_code} != 200 ))
 do :; done
-echo "siddhi app has been deployed successfully on on server ${REMOTE_IP1}"
+echo "Siddhi app has been deployed successfully on on server ${REMOTE_IP1}"
 sleep 5
-}
 
-wait_until_deploy_on_server_2() {
-echo "waiting until siddhi app getting deployed on server ${REMOTE_IP2}.."
+echo "Waiting until siddhi app getting deployed on server ${REMOTE_IP2}.."
 while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
     https://${REMOTE_IP2}:${SERVER_2_HTTPS_PORT}/${SIDDHI_APP_STATUS_REST_PATH}\
@@ -233,9 +226,10 @@ while
     sleep 1
     ((${status_code} != 200 ))
 do :; done
-echo "siddhi app has been deployed successfully on on server ${REMOTE_IP2}"
+echo "Siddhi app has been deployed successfully on on server ${REMOTE_IP2}"
 sleep 5
 }
+
 
 execute_client() {
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
@@ -258,18 +252,16 @@ execute_client() {
 main() {
    print_parameters
    clone_artifacts
-   start_sever_1
-   wait_until_deploy_on_server_1
-   start_sever_2
-   wait_until_deploy_on_server_2
+   start_severs
+   wait_until_deploy_on_servers
    execute_client
-   shutdown_server_1
-   shutdown_server_2
+   shutdown_servers
+   shutdown_servers
    download_results
    summarize
    push_results_to_git
-   clean_server_1
-   clean_server_2
+   clean_servers
+   clean_servers
 }
 
 main
