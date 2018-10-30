@@ -23,36 +23,34 @@
 # Echoes all commands before executing.
 #set -o verbose
 
-readonly PRODUCT_NAME=wso2sp
-readonly PRODUCT_VERSION=4.3.0
-readonly INSTALLATION_DIR=/home/ubuntu
+readonly SCENARIO=$1
+readonly WINDOW_SIZE=$2
+readonly NODE_ID=$3
+readonly INSTALLATION_DIR=$4
+readonly PRODUCT_NAME="wso2sp"
+readonly PRODUCT_VERSION=$5
+
 readonly ARTIFACT_DIR="${INSTALLATION_DIR}/artifacts"
 readonly PRODUCT_HOME="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}"
+readonly PRODUCT_DOWNLOAD_URL="https://github.com/wso2/product-sp/releases/download/v${PRODUCT_VERSION}/wso2sp-4.3.0.zip"
 readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
-
-# databases
-readonly WSO2_UM_DB="WSO2_UM_DB"
-readonly WSO2_REG_DB="WSO2_REG_DB"
-readonly WSO2_ANALYTICS_EVENT_STORE="WSO2_ANALYTICS_EVENT_STORE_DB"
-readonly WSO2_ANALYTICS_PROCESSED_DATA_STORE="WSO2_ANALYTICS_PROCESSED_DATA_STORE_DB"
-readonly WSO2_AM_STATS_DB="WSO2_AM_STATS_DB"
+readonly PRODUCT_ZIP_PATH="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}.zip"
 
 readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
 readonly SP_LIB_DIR="${PRODUCT_HOME}/lib"
+readonly SP_CONF_DIR="${PRODUCT_HOME}/conf/worker"
 
 
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
 readonly SIDDHI_APP_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
 readonly SIDDHI_APP_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/artifacts"
-readonly CLIENT_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/clients"
 readonly LIB_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/libs"
-
+readonly CONF_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/conf"
 
 readonly MYSQL_USERNAME=root
 readonly MYSQL_PASSWORD=root
 
-readonly SCENARIO=$1
-readonly WINDOW_SIZE=$2
+
 
 readonly SCENARIO_PASSTHROUGH=1
 readonly SCENARIO_FILTER=2
@@ -67,6 +65,11 @@ readonly SCENARIO_PERSISTENCE_MSSQL_UPDATE=10
 readonly SCENARIO_PERSISTENCE_ORACLE_INSERT=11
 readonly SCENARIO_PERSISTENCE_ORACLE_UPDATE=12
 
+readonly SERVER_ID1=1;
+readonly SERVER_ID2=2;
+
+readonly DEPLOYMENT_YAML=deployment.yaml
+
 clone_artifacts() {
     mkdir -p ${INSTALLATION_DIR}
     cd ${INSTALLATION_DIR}
@@ -74,8 +77,24 @@ clone_artifacts() {
     git clone ${SIDDHI_APP_REPO_URL}
 }
 
+unzip_procuct_pack() {
+    echo "Unzipping ${PRODUCT_ZIP_PATH}.."
+    unzip ${PRODUCT_ZIP_PATH} -d ${INSTALLATION_DIR}
+}
+
+copy_conf() {
+    cd ${CONF_DIR}
+
+    if [${NODE_ID} -eq ${SERVER_ID1} || ${NODE_ID} -eq ${SERVER_ID2}]; then
+        echo "Copying deployment.yaml.."
+        cp ${NODE_ID}/${DEPLOYMENT_YAML} ${SP_CONF_DIR}
+    else
+        echo "Invalid id for server : ${NODE_ID}!!"
+    fi
+}
+
 setup_mysql_database() {
-    echo "setting up mysql database"
+    echo "Setting up mysql database"
     mysql -u root -proot -e "CREATE DATABASE StreamProcessor; USE StreamProcessor;"
 }
 
@@ -177,11 +196,11 @@ copy_libs() {
 
 remove_siddhi_app() {
     rm -f ${SIDDHI_APP_DEPLOYMENT_DIR}/TCP_Benchmark.siddhi
-    echo "siddhi app removed from the worker."
+    echo "Siddhi app removed from the worker."
 }
 
 start_server() {
-    echo "starting wso2 stream processor.."
+    echo "Starting wso2 stream processor.."
     export JAVA_HOME=${JAVA_HOME_PATH}
     cd ${PRODUCT_HOME}/bin
     sh worker.sh start
@@ -190,6 +209,8 @@ start_server() {
 
 main() {
     clone_artifacts
+    unzip_procuct_pack
+    copy_conf
     copy_siddhiApp
     copy_libs
     start_server
