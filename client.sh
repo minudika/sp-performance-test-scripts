@@ -19,6 +19,26 @@
 #
 # ----------------------------------------------------------------------------
 
+
+readonly CLIENT_DIR=$1
+readonly BATCH_SIZE=$2
+readonly THREAD_COUNT=$3
+readonly INTERVAL=$4 #Time between batches
+readonly TEST_DURATION=$5
+readonly SCENARIO=$6
+readonly WINDOW_SIZE=$7
+readonly NODE_ID_1=${8}
+readonly REMOTE_IP1=${9}
+readonly PORT1=${10}
+readonly REMOTE_USERNAME1=${11}
+readonly NODE_ID_2=${12}
+readonly REMOTE_IP2=${13}
+readonly PORT2=${14}
+readonly REMOTE_USERNAME2=${15}
+readonly KEY=${16}
+readonly INSTALLATION_DIR=${17}
+readonly PRODUCT_VERSION=${18}
+
 readonly SCENARIO_PASSTHROUGH=1
 readonly SCENARIO_FILTER=2
 readonly SCENARIO_PATTERNS=3
@@ -41,6 +61,9 @@ readonly ENTIRE_AVG_LATENCY="Entire Average latency per event for the run(ms)"
 readonly AVG_LATENCY_90="AVG latency from start (90)"
 readonly AVG_LATENCY_95="AVG latency from start (95)"
 readonly AVG_LATENCY_99="AVG latency from start (99)"
+readonly LOAD_AVG_1_MIN="Load Average - Last 1 minute"
+readonly LOAD_AVG_5_MIN="Load Average - Last 5 minutes"
+readonly LOAD_AVG_15_MIN="Load Average - Last 15 minutes"
 readonly WINDOW_SIZE_HEADER="Window size"
 readonly BATCH_SIZE_HEADER="Batch size"
 readonly SCENARIO_HEADER="Scenario"
@@ -50,16 +73,21 @@ readonly SERVER_1_HTTPS_PORT="9443"
 readonly SERVER_2_HTTPS_PORT="9444"
 
 readonly PRODUCT_NAME=wso2sp
-readonly PRODUCT_VERSION=4.3.0
-readonly INSTALLATION_DIR=/home/ubuntu
-readonly PRODUCT_HOME="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}"
-
-readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
 
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
-readonly CLIENT_DIR_NAME="clients"
 readonly SIDDHI_APP_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
 readonly PERFORMANCE_RESULTS_REPO=git@github.com:minudika/sp-performance-test-results.git
+readonly PUBLISHING_CLIENT_DIR="${ARTIFACT_REPO_NAME}/clients"
+readonly PUBLISHING_CLIENT_JAR_NAME="performance-tcp-client-5-jar-with-dependencies.jar"
+
+readonly DOWNLOAD_DIR_NAME=sp-performance-test-results
+readonly DOWNLOAD_PATH=${CLIENT_DIR}/${DOWNLOAD_DIR_NAME}
+readonly SUMMARY_FILE_NAME=summary.csv
+readonly SUMMARY_FILE_PATH=${DOWNLOAD_PATH}/summary.csv
+readonly REPORT_LOCATION=${CLIENT_DIR}/metrics
+
+
+print_parameters() {
 
 readonly CLIENT_DIR=$1
 readonly BATCH_SIZE=$2
@@ -68,21 +96,18 @@ readonly INTERVAL=$4 #Time between batches
 readonly TEST_DURATION=$5
 readonly SCENARIO=$6
 readonly WINDOW_SIZE=$7
-readonly REMOTE_IP1=${8}
-readonly PORT1=$9
-readonly REMOTE_USERNAME1=${10}
-readonly REMOTE_IP2=${11}
-readonly PORT2=${12}
-readonly REMOTE_USERNAME2=${13}
-readonly KEY=${14}
+readonly NODE_ID_1=${8}
+readonly REMOTE_IP1=${9}
+readonly PORT1=${10}
+readonly REMOTE_USERNAME1=${11}
+readonly NODE_ID_2=${12}
+readonly REMOTE_IP2=${13}
+readonly PORT2=${14}
+readonly REMOTE_USERNAME2=${15}
+readonly KEY=${16}
+readonly INSTALLATION_DIR=${17}
+readonly PRODUCT_VERSION=${18}
 
-readonly DOWNLOAD_DIR_NAME=downloaded-results
-readonly DOWNLOAD_PATH=${CLIENT_DIR}/${DOWNLOAD_DIR_NAME}
-readonly SUMMARY_FILE_NAME=summary.csv
-readonly SUMMARY_FILE_PATH=${DOWNLOAD_PATH}/summary.csv
-
-
-print_parameters() {
 echo "
 1. Client home : ${CLIENT_DIR}
 2. Batch size : ${BATCH_SIZE}
@@ -91,12 +116,17 @@ echo "
 5. Test duration : ${TEST_DURATION}
 6. Scenario : ${SCENARIO}
 7. Window size : ${WINDOW_SIZE}
-8. REMOTE IP 1 : ${REMOTE_IP1}
-9. PORT 1 : ${PORT1}
-10. REMOTE_USERNAME 1: ${REMOTE_USERNAME1}
-11. REMOTE IP 2: ${REMOTE_IP2}
-12. PORT 2 : ${PORT2}
-13. REMOTE_USERNAME 2: ${REMOTE_USERNAME2}
+8. Node id 1 : ${NODE_ID_1}
+9. REMOTE IP 1 : ${REMOTE_IP1}
+10. PORT 1 : ${PORT1}
+11. REMOTE_USERNAME 1: ${REMOTE_USERNAME1}
+12. Node id 2 : ${NODE_ID_2}
+13. REMOTE IP 2: ${REMOTE_IP2}
+14. PORT 2 : ${PORT2}
+15. REMOTE_USERNAME 2: ${REMOTE_USERNAME2}
+16. KEY : ${KEY}
+17. Installation Dir : ${INSTALLATION_DIR}
+18. Product version : ${PRODUCT_VERSION}
 "
 }
 
@@ -107,41 +137,65 @@ clone_artifacts() {
     git clone ${SIDDHI_APP_REPO_URL}
 }
 
-start_severs() {
+start_sever_1() {
     echo "Starting the server ${REMOTE_IP1}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./setup-sp.sh ${SCENARIO}
-
-    echo "Starting the server ${REMOTE_IP2}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./setup-sp.sh ${SCENARIO}
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_1}\
+     ${INSTALLATION_DIR} ${PRODUCT_VERSION}
 }
 
+start_sever_2() {
+    echo "Starting the server ${REMOTE_IP2}.."
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_2}\
+     ${INSTALLATION_DIR} ${PRODUCT_VERSION}
+}
 
-shutdown_servers() {
-    echo "Shutting down the server ${REMOTE_IP1}.."
+shutdown_server_1() {
+    echo "Shutting down the server.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./shutdown-sp.sh
+}
 
-    echo "Shutting down the server ${REMOTE_IP2}.."
+shutdown_server_2() {
+    echo "Shutting down the server.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./shutdown-sp.sh
 }
 
 download_results() {
     cd ${CLIENT_DIR}
-    mkdir ${DOWNLOAD_DIR_NAME}
+    git clone ${PERFORMANCE_RESULTS_REPO}
     cd ${DOWNLOAD_DIR_NAME}
     mkdir ${SCENARIO}
-    echo "Downloading result set from ${REMOTE_IP1}.."
+    echo "Downloading result set.."
     sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:/home/ubuntu/wso2sp-4.3.0/wso2/worker/performance-results/ \
     ${DOWNLOAD_PATH}/${SCENARIO}
 }
 
+zip_downloaded_results() {
+    cd ${CLIENT_DIR}
+    echo "Compressing downloaded results into ${DOWNLOAD_DIR_NAME}.zip"
+    zip -r ${DOWNLOAD_DIR_NAME}.zip ${DOWNLOAD_DIR_NAME}
+}
+
 create_summary_file() {
     header="${SCENARIO_HEADER},${BATCH_SIZE_HEADER},${WINDOW_SIZE_HEADER},${TOTAL_ELAPSED_TIME},${TOTAL_EVENT_COUNT},\
-    ${ENTIRE_THROUGHPUT},${ENTIRE_AVG_LATENCY},${AVG_LATENCY_90},${AVG_LATENCY_95},${AVG_LATENCY_99}"
+    ${ENTIRE_THROUGHPUT},${ENTIRE_AVG_LATENCY},${AVG_LATENCY_90},${AVG_LATENCY_95},${AVG_LATENCY_99},\
+    ${LOAD_AVG_1_MIN},${LOAD_AVG_5_MIN},${LOAD_AVG_15_MIN}"
 
     if [ ! -f ${SUMMARY_FILE_PATH} ]; then
         echo "Creating summary file"
         echo "${header}" >> ${SUMMARY_FILE_PATH}
     fi
+}
+
+get_server_metrics() {
+    echo "Collecting server metrics from $server."
+    mkdir ${REPORT_LOCATION}
+    export LC_TIME=C
+    command_prefix="sudo ssh -i ${KEY} -o SendEnv=LC_TIME ubuntu@192.168.57.25"
+    ${command_prefix} ss -s >${REPORT_LOCATION}/${REMOTE_IP1}_ss.txt
+    ${command_prefix} uptime >${REPORT_LOCATION}/${REMOTE_IP1}_uptime.txt
+    ${command_prefix} sar -q >${REPORT_LOCATION}/${REMOTE_IP1}_loadavg.txt
+    ${command_prefix} sar -A >${REPORT_LOCATION}/${REMOTE_IP1}_sar.txt
+    ${command_prefix} top -bn 1 >${REPORT_LOCATION}/${REMOTE_IP1}_top.txt
 }
 
 summarize() {
@@ -174,11 +228,16 @@ case ${SCENARIO} in
     esac
 
     create_summary_file
+    get_server_metrics
 
+    avgValues=$(tail -2 ${REPORT_LOCATION}/${REMOTE_IP1}_loadavg.txt | head -1)
+
+    loadAvgs=( $avgValues )
     echo "Summarizing performance results of ${scenario_name} test.."
     while IFS=, read -r col0 col1 col2 col3 col4 col5 col6 col7 col8 col9 col10 col11 col12 col13
     do
-        value="${scenario_name},${BATCH_SIZE},${WINDOW_SIZE},${col3},${col4},${col2},${col7},${col8},${col9},${col10}"
+        value="${scenario_name},${BATCH_SIZE},${WINDOW_SIZE},${col3},${col4},${col2},${col7},${col8},${col9},${col10},\
+        ${loadAvgs[3]},${loadAvgs[4]},${loadAvgs[5]}"
     done < <(tail -n 1 ${DOWNLOAD_PATH}/${SCENARIO}/${PERFORMANCE_RESULTS}/${PERFORMANCE_RESULTS_FILE_NAME})
 
     echo ${value} >> ${SUMMARY_FILE_PATH}
@@ -186,24 +245,25 @@ case ${SCENARIO} in
 
 push_results_to_git() {
     cd ${DOWNLOAD_PATH}
-    git init
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-    git remote add origin ${PERFORMANCE_RESULTS_REPO}
+    //git remote add origin ${PERFORMANCE_RESULTS_REPO}
     git add -A
     git commit -m "${current_date_time} : Add performance results" -m "Test duration : ${TEST_DURATION}"
-    echo "${current_date_time}: Pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
+    echo "${current_date_time}: pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
     git push -u origin master
 }
 
-clean_servers() {
+clean_server_1() {
     echo "Removing performance results and siddhi apps from worker ${REMOTE_IP1}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./clean.sh
+}
 
+clean_server_2() {
     echo "Removing performance results and siddhi apps from worker ${REMOTE_IP2}.."
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./clean.sh
 }
 
-wait_until_deploy_on_servers() {
+wait_until_deploy_on_server_1() {
 echo "Waiting until siddhi app getting deployed on server ${REMOTE_IP1}.."
 while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
@@ -216,13 +276,15 @@ while
 do :; done
 echo "Siddhi app has been deployed successfully on on server ${REMOTE_IP1}"
 sleep 5
+}
 
+wait_until_deploy_on_server_2() {
 echo "Waiting until siddhi app getting deployed on server ${REMOTE_IP2}.."
 while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
     https://${REMOTE_IP2}:${SERVER_2_HTTPS_PORT}/${SIDDHI_APP_STATUS_REST_PATH}\
      -H "accept: application/json"\
-     -u admin:admin -k)
+     -u admin:admin -k -v)
 
     sleep 1
     ((${status_code} != 200 ))
@@ -231,11 +293,10 @@ echo "Siddhi app has been deployed successfully on on server ${REMOTE_IP2}"
 sleep 5
 }
 
-
 execute_client() {
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
 
-    cd ${CLIENT_DIR}/${ARTIFACT_REPO_NAME}/${CLIENT_DIR_NAME}
+    cd ${PUBLISHING_CLIENT_DIR}
     echo "[${current_date_time}] Executing tcp client.."
     java \
         -Dhost=${REMOTE_IP1}\
@@ -245,7 +306,7 @@ execute_client() {
         -Dduration=${TEST_DURATION}\
         -Dthread.count=${THREAD_COUNT}\
         -Dscenario=${SCENARIO}\
-        -jar performance-tcp-client-5-jar-with-dependencies.jar\
+        -jar ${PUBLISHING_CLIENT_JAR_NAME}\
         /
 }
 
@@ -253,16 +314,18 @@ execute_client() {
 main() {
    print_parameters
    clone_artifacts
-   start_severs
-   wait_until_deploy_on_servers
+   start_sever_1
+   wait_until_deploy_on_server_1
+   start_sever_2
+   wait_until_deploy_on_server_2
    execute_client
-   shutdown_servers
-   shutdown_servers
+   shutdown_server_1
+   shutdown_server_2
    download_results
    summarize
    push_results_to_git
-   clean_servers
+   clean_server_1
+   clean_server_2
 }
 
 main
-

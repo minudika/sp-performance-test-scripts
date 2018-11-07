@@ -50,8 +50,6 @@ readonly CONF_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/conf"
 readonly MYSQL_USERNAME=root
 readonly MYSQL_PASSWORD=root
 
-
-
 readonly SCENARIO_PASSTHROUGH=1
 readonly SCENARIO_FILTER=2
 readonly SCENARIO_PATTERNS=3
@@ -69,6 +67,8 @@ readonly SERVER_ID1=1;
 readonly SERVER_ID2=2;
 
 readonly DEPLOYMENT_YAML=deployment.yaml
+readonly PERFORMANCE_EXTENSION_JAR_NAME="siddhi-execution-performance-4.3.0.jar"
+readonly MYSQL_DRIVER_LIB_NAME="mysql-connector-java-5.1.42-bin.jar"
 
 clone_artifacts() {
     mkdir -p ${INSTALLATION_DIR}
@@ -84,12 +84,14 @@ unzip_procuct_pack() {
 
 copy_conf() {
     cd ${CONF_DIR}
-
-    if [${NODE_ID} -eq ${SERVER_ID1} || ${NODE_ID} -eq ${SERVER_ID2}]; then
-        echo "Copying deployment.yaml.."
+    if [[ ${NODE_ID} == ${SERVER_ID1} ]]; then
+        echo "Copying ${NODE_ID}/deployment.yaml to ${NODE_ID}.."
+        cp ${NODE_ID}/${DEPLOYMENT_YAML} ${SP_CONF_DIR}
+    elif [[ ${NODE_ID} == ${SERVER_ID2} ]]; then
+        echo "Copying ${NODE_ID}/deployment.yaml to ${NODE_ID}.."
         cp ${NODE_ID}/${DEPLOYMENT_YAML} ${SP_CONF_DIR}
     else
-        echo "Invalid id for server : ${NODE_ID}!!"
+        echo "Provided node id : ${NODE_ID} is invalid!"
     fi
 }
 
@@ -191,7 +193,8 @@ copy_siddhiApp() {
 
 copy_libs() {
     cd ${LIB_DIR}
-    cp "siddhi-execution-performance-4.3.0.jar" ${SP_LIB_DIR}
+    cp ${PERFORMANCE_EXTENSION_JAR_NAME} ${SP_LIB_DIR}
+    cp ${MYSQL_DRIVER_LIB_NAME} ${SP_LIB_DIR}
 }
 
 remove_siddhi_app() {
