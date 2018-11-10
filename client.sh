@@ -162,7 +162,7 @@ shutdown_server_2() {
 download_results() {
     cd ${CLIENT_DIR}
     git clone ${PERFORMANCE_RESULTS_REPO}
-    cd ${DOWNLOAD_DIR_NAME}
+    cd ${DOWNLOAD_PATH}
     mkdir ${SCENARIO}
     echo "Downloading result set.."
     sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:/home/ubuntu/wso2sp-4.3.0/wso2/worker/performance-results/ \
@@ -246,7 +246,7 @@ case ${SCENARIO} in
 push_results_to_git() {
     cd ${DOWNLOAD_PATH}
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-    //git remote add origin ${PERFORMANCE_RESULTS_REPO}
+    git remote add origin ${PERFORMANCE_RESULTS_REPO}
     git add -A
     git commit -m "${current_date_time} : Add performance results" -m "Test duration : ${TEST_DURATION}"
     echo "${current_date_time}: pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
