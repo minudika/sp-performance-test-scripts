@@ -22,30 +22,30 @@
 #exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 # Echoes all commands before executing.
 #set -o verbose
-readonly PRODUCT_DOWNLOAD_URL=${1}
-readonly CLIENT_HOME=${2}
-readonly NODE_ID_1=${3}
-readonly REMOTE_SERVER_IP1=${4}
-readonly PORT1=${18}
-readonly REMOTE_SERVER_USERNAME1=${4}
-readonly NODE_ID_2=${20}
-readonly REMOTE_SERVER_IP2=${5}
-readonly PORT2=${22}
-readonly REMOTE_SERVER_USERNAME2=${6}
-readonly REMOTE_CLIENT_IP=${7}
-readonly REMOTE_CLIENT_USERNAME=${8}
-readonly REMOTE_INSTALLATION_PATH=${9}
-readonly BATCH_SIZE=${10}
-readonly THREAD_COUNT=${11}
-readonly INTERVAL=${12} #Time between batches
-readonly TEST_DURATION=${13}
-readonly SCENARIO=${14}
-readonly WINDOW_SIZE=${15}
-readonly JENKINS_SSH_KEY=${16}
-readonly CLIENT_SSH_LEY=${17}
-readonly SERVER_INSTALLATION_DIR=${18}
-readonly CLIENT_INSTALLATION_DIR=${19}
-readonly PRODUCT_VERSION=${20}
+#readonly PRODUCT_DOWNLOAD_URL=${1}
+#readonly CLIENT_HOME=${2}
+#readonly NODE_ID_1=${3}
+#readonly REMOTE_SERVER_IP1=${4}
+#readonly PORT1=${18}
+#readonly REMOTE_SERVER_USERNAME1=${4}
+#readonly NODE_ID_2=${20}
+#readonly REMOTE_SERVER_IP2=${5}
+#readonly PORT2=${22}
+#readonly REMOTE_SERVER_USERNAME2=${6}
+#readonly REMOTE_CLIENT_IP=${7}
+#readonly REMOTE_CLIENT_USERNAME=${8}
+#readonly REMOTE_INSTALLATION_PATH=${9}
+#readonly BATCH_SIZE=${10}
+#readonly THREAD_COUNT=${11}
+#readonly INTERVAL=${12} #Time between batches
+#readonly TEST_DURATION=${13}
+#readonly SCENARIO=${14}
+#readonly WINDOW_SIZE=${15}
+#readonly JENKINS_SSH_KEY=${16}
+#readonly CLIENT_SSH_LEY=${17}
+#readonly SERVER_INSTALLATION_DIR=${18}
+#readonly CLIENT_INSTALLATION_DIR=${19}
+#readonly PRODUCT_VERSION=${20}
 
 
 readonly PRODUCT_NAME=wso2sp
@@ -63,11 +63,19 @@ readonly WSO2_ANALYTICS_PROCESSED_DATA_STORE="WSO2_ANALYTICS_PROCESSED_DATA_STOR
 readonly WSO2_AM_STATS_DB="WSO2_AM_STATS_DB"
 
 readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
+readonly SP_CONF_DIR=${PRODUCT_NAME}-${PRODUCT_VERSION}/conf/worker/
 readonly SP_LIB_DIR="${PRODUCT_HOME}/lib"
 
-
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
-readonly SIDDHI_APP_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
+readonly ARTIFACT_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
+
+
+readonly SCRIPT_REPO_URL="git@github.com:minudika/sp-performance-test-scripts.git"
+readonly SCRIPT_REPO_NAME="sp-performance-test-scripts"
+
+readonly DISTRIBUTION_NAME="distribution"
+readonly PRODUCT_ZIP_NAME="${PRODUCT_NAME}-${PRODUCT_VERSION}.zip"
+readonly PRODUCT_PACK_NAME="${PRODUCT_NAME}-${PRODUCT_VERSION}"
 
 
 readonly MYSQL_USERNAME=root
@@ -94,6 +102,47 @@ download_product() {
     fi
 }
 
+build_distribution() {
+    script_location="`dirname \"$0\"`"              # relative
+    script_location="`( cd \"$script_location\" && pwd )`"  # absolutized and normalized
+    if [ -z "$script_location" ] ; then
+        exit 1  # fail
+    fi
+    cd ${script_location}
+
+
+    echo "Cloning ${SCRIPT_REPO_URL} into ${script_locatoin}.."
+    git clone ${SCRIPT_REPO_URL}
+    echo "Cloning ${ARTIFACT_REPO_URL} into ${script_locatoin}.."
+    git clone ${ARTIFACT_REPO_URL}
+
+    echo "Unzipping ${PRODUCT_ZIP_NAME} into 1/"
+    unzip -q ${PRODUCT_ZIP_NAME} -d distribution-1/
+    echo "Unzipping ${PRODUCT_ZIP_NAME} into 2/"
+    unzip -q ${PRODUCT_ZIP_NAME} -d distribution-2/
+
+    echo "Copying ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml into distribution-1/${PRODUCT_PACK_NAME}/conf/worker/"
+    cp ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml distribution-1/${PRODUCT_PACK_NAME}/conf/worker/
+    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into distribution-1/${PRODUCT_PACK_NAME}/lib/"
+    cp  ${ARTIFACT_REPO_NAME}/libs/* distribution-1/${PRODUCT_PACK_NAME}/lib
+
+    echo "Copying ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml into 2/${PRODUCT_PACK_NAME}/conf/worker/"
+    cp ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml distribution-2/${PRODUCT_PACK_NAME}
+    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into distribution-2/${PRODUCT_PACK_NAME}/lib/"
+    cp  ${ARTIFACT_REPO_NAME}/libs/* distribution-2/${PRODUCT_PACK_NAME}/lib
+
+    cp ${SCRIPT_REPO_NAME}/setup-sp.sh distribution-1/
+    cp ${SCRIPT_REPO_NAME}/clean.sh distribution-1/
+
+    cp ${SCRIPT_REPO_NAME}/setup-sp.sh distribution-2/
+    cp ${SCRIPT_REPO_NAME}/clean.sh distribution-2/
+
+    zip -rq distribution-1.zip distribution-1/
+    zip -rq distribution-2.zip distribution-2/
+
+
+}
+
 upload_product() {
     echo "Uploading ${PRODUCT_NAME}-${PRODUCT_VERSION}.zip to ${REMOTE_SERVER_IP1}"
     scp -i ${KEY} ${PRODUCT_ZIP_FILE_PATH} ${REMOTE_SERVER_USERNAME1}@${REMOTE_SERVER_IP1}:${REMOTE_INSTALLATION_PATH}
@@ -108,9 +157,7 @@ execute_client() {
 }
 
 main() {
-    download_product
-    upload_product
-    execute_client
+    build_distribution
 }
 
 main
