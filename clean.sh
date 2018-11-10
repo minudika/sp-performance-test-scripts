@@ -42,9 +42,9 @@ readonly LIB_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/libs"
 
 
 clean() {
-    rm -rf ${PRODUCT_HOME}/wso2/worker/performance-results
     rm -f ${SIDDHI_APP_DEPLOYMENT_DIR}/TCP_Benchmark.siddhi
     rm -rf ${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}
+    rm -rf ${PRODUCT_HOME}
     echo "siddhi app and performance results removed from the worker."
 }
 
