@@ -19,40 +19,9 @@
 #
 # ----------------------------------------------------------------------------
 
-#exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-# Echoes all commands before executing.
-#set -o verbose
-#readonly PRODUCT_DOWNLOAD_URL=${1}
-#readonly CLIENT_HOME=${2}
-#readonly NODE_ID_1=${3}
-#readonly REMOTE_SERVER_IP1=${4}
-#readonly PORT1=${18}
-#readonly REMOTE_SERVER_USERNAME1=${4}
-#readonly NODE_ID_2=${20}
-#readonly REMOTE_SERVER_IP2=${5}
-#readonly PORT2=${22}
-#readonly REMOTE_SERVER_USERNAME2=${6}
-#readonly REMOTE_CLIENT_IP=${7}
-#readonly REMOTE_CLIENT_USERNAME=${8}
-#readonly REMOTE_INSTALLATION_PATH=${9}
-#readonly BATCH_SIZE=${10}
-#readonly THREAD_COUNT=${11}
-#readonly INTERVAL=${12} #Time between batches
-#readonly TEST_DURATION=${13}
-#readonly SCENARIO=${14}
-#readonly WINDOW_SIZE=${15}
-#readonly JENKINS_SSH_KEY=${16}
-#readonly CLIENT_SSH_LEY=${17}
-#readonly SERVER_INSTALLATION_DIR=${18}
-#readonly CLIENT_INSTALLATION_DIR=${19}
-#readonly PRODUCT_VERSION=${20}
-
-
 readonly PRODUCT_NAME=wso2sp
 readonly PRODUCT_VERSION=4.3.0
-readonly PRODUCT_ZIP_FILE_PATH=${PRODUCT_HOME}.zip
 readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
-readonly PRODUCT_ZIP_FILE_PATH=${PRODUCT_HOME}.zip
 readonly PRODUCT_DOWNLOAD_URL="https://github.com/wso2/product-sp/releases/download/v${PRODUCT_VERSION}/wso2sp-4.3.0.zip"
 
 
@@ -94,7 +63,7 @@ readonly SP_PACK_PATH_2=${DISTRIBUTION_PATH_2}/${PRODUCT_PACK_NAME}
 
 
 
-readonly REMOTE_INSTALLATION_PATH=home/ubuntu
+readonly REMOTE_INSTALLATION_PATH=/home/ubuntu
 
 
 readonly MYSQL_USERNAME=root
@@ -162,23 +131,36 @@ setup_distribution() {
     cp ${SCRIPT_REPO_NAME}/shutdown-sp.sh ${DISTRIBUTION_PATH_2}
     cp ${SCRIPT_REPO_NAME}/clean.sh ${DISTRIBUTION_PATH_2}
 
-    cd ${NODE_ID_1/
+    cd ${NODE_ID_1}/
+    echo "Creating ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip.."
     zip -rq ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${DISTRIBUTION_NAME}/
     mv ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${script_location}
+
     cd ${script_location}/${NODE_ID_2}
+    echo "Creating ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip.."
     zip -rq ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${DISTRIBUTION_NAME}/
     mv ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${script_location}
 
+    cd ${script_location}
+
     echo "Uploading ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip to ${REMOTE_IP1}"
-    scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
+    sudo scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip \
+    ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
+
+    echo "Extracting ${DISTRIBUTION_NAME} in ${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}"
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}  "unzip ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip"
 
     echo "Uploading ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip to ${REMOTE_IP2}"
-    scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
+    sudo scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip \
+    ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
+
+    echo "Extracting ${DISTRIBUTION_NAME} in ${REMOTE_IP2}:${REMOTE_INSTALLATION_PATH}"
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2}  "unzip ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip"
 }
 
 execute_client() {
     echo "Executing client.."
-    ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
+    sudo ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
       /home/ubuntu 1000 1 1000 900000 1 1000 1 192.168.57.248 9892 ubuntu 2 192.168.57.25 9892 ubuntu\
       /home/ubuntu/keys/ssh-key 4.3.0
 

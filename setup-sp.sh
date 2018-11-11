@@ -212,10 +212,10 @@ start_server() {
 
 main() {
     clone_artifacts
-    unzip_procuct_pack
-    copy_conf
+    #unzip_procuct_pack
+    #copy_conf
     copy_siddhiApp
-    copy_libs
+    #copy_libs
     start_server
 }
 
