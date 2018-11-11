@@ -70,6 +70,13 @@ readonly DEPLOYMENT_YAML=deployment.yaml
 readonly PERFORMANCE_EXTENSION_JAR_NAME="siddhi-execution-performance-4.3.0.jar"
 readonly MYSQL_DRIVER_LIB_NAME="mysql-connector-java-5.1.42-bin.jar"
 
+
+print_params() {
+    echo "SCENARIO : ${SCENARIO}"
+    echo "WINDOW_SIZE : ${WINDOW_SIZE}"
+    echo "NODE_ID : ${NODE_ID}"
+    echo "INSTALLATION_DIR : ${INSTALLATION_DIR}"
+}
 clone_artifacts() {
     mkdir -p ${INSTALLATION_DIR}
     cd ${INSTALLATION_DIR}
@@ -211,6 +218,7 @@ start_server() {
 
 
 main() {
+    print_params
     clone_artifacts
     #unzip_procuct_pack
     #copy_conf
