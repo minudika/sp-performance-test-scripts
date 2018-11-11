@@ -36,9 +36,9 @@ readonly REMOTE_IP2=${13}
 readonly PORT2=${14}
 readonly REMOTE_USERNAME2=${15}
 readonly KEY=${16}
-readonly INSTALLATION_DIR=${17}
-readonly PRODUCT_VERSION=${18}
+readonly PRODUCT_VERSION=${17}
 
+readonly INSTALLATION_DIR=/home/ubuntu/distribution
 readonly SCENARIO_PASSTHROUGH=1
 readonly SCENARIO_FILTER=2
 readonly SCENARIO_PATTERNS=3
@@ -88,26 +88,6 @@ readonly REPORT_LOCATION=${CLIENT_DIR}/metrics
 
 
 print_parameters() {
-
-readonly CLIENT_DIR=$1
-readonly BATCH_SIZE=$2
-readonly THREAD_COUNT=$3
-readonly INTERVAL=$4 #Time between batches
-readonly TEST_DURATION=$5
-readonly SCENARIO=$6
-readonly WINDOW_SIZE=$7
-readonly NODE_ID_1=${8}
-readonly REMOTE_IP1=${9}
-readonly PORT1=${10}
-readonly REMOTE_USERNAME1=${11}
-readonly NODE_ID_2=${12}
-readonly REMOTE_IP2=${13}
-readonly PORT2=${14}
-readonly REMOTE_USERNAME2=${15}
-readonly KEY=${16}
-readonly INSTALLATION_DIR=${17}
-readonly PRODUCT_VERSION=${18}
-
 echo "
 1. Client home : ${CLIENT_DIR}
 2. Batch size : ${BATCH_SIZE}
@@ -125,8 +105,7 @@ echo "
 14. PORT 2 : ${PORT2}
 15. REMOTE_USERNAME 2: ${REMOTE_USERNAME2}
 16. KEY : ${KEY}
-17. Installation Dir : ${INSTALLATION_DIR}
-18. Product version : ${PRODUCT_VERSION}
+17. Product version : ${PRODUCT_VERSION}
 "
 }
 
@@ -139,24 +118,26 @@ clone_artifacts() {
 
 start_sever_1() {
     echo "Starting the server ${REMOTE_IP1}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_1}\
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE}
+    ${NODE_ID_1}\
      ${INSTALLATION_DIR} ${PRODUCT_VERSION}
 }
 
 start_sever_2() {
     echo "Starting the server ${REMOTE_IP2}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_2}\
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE}
+    ${NODE_ID_2}\
      ${INSTALLATION_DIR} ${PRODUCT_VERSION}
 }
 
 shutdown_server_1() {
     echo "Shutting down the server.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./shutdown-sp.sh
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/shutdown-sp.sh
 }
 
 shutdown_server_2() {
     echo "Shutting down the server.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./shutdown-sp.sh
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/shutdown-sp.sh
 }
 
 download_results() {

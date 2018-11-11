@@ -55,6 +55,16 @@ readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
 readonly PRODUCT_ZIP_FILE_PATH=${PRODUCT_HOME}.zip
 readonly PRODUCT_DOWNLOAD_URL="https://github.com/wso2/product-sp/releases/download/v${PRODUCT_VERSION}/wso2sp-4.3.0.zip"
 
+
+readonly NODE_ID_1=1
+readonly REMOTE_IP1=192.168.57.248
+readonly REMOTE_USERNAME1=ubuntu
+readonly NODE_ID_2=2
+readonly REMOTE_IP2=192.168.57.25
+readonly REMOTE_USERNAME2=ubuntu
+readonly REMOTE_CLIENT_IP=192.168.57.95
+readonly REMOTE_CLIENT_USERNAME=ubuntu
+
 # databases
 readonly WSO2_UM_DB="WSO2_UM_DB"
 readonly WSO2_REG_DB="WSO2_REG_DB"
@@ -76,10 +86,21 @@ readonly SCRIPT_REPO_NAME="sp-performance-test-scripts"
 readonly DISTRIBUTION_NAME="distribution"
 readonly PRODUCT_ZIP_NAME="${PRODUCT_NAME}-${PRODUCT_VERSION}.zip"
 readonly PRODUCT_PACK_NAME="${PRODUCT_NAME}-${PRODUCT_VERSION}"
+readonly DISTRIBUTION_PATH_1=${NODE_ID_1}/${DISTRIBUTION_NAME}
+readonly DISTRIBUTION_PATH_2=${NODE_ID_2}/${DISTRIBUTION_NAME}
+
+readonly SP_PACK_PATH_1=${DISTRIBUTION_PATH_1}/${PRODUCT_PACK_NAME}
+readonly SP_PACK_PATH_2=${DISTRIBUTION_PATH_2}/${PRODUCT_PACK_NAME}
+
+
+
+readonly REMOTE_INSTALLATION_PATH=home/ubuntu
 
 
 readonly MYSQL_USERNAME=root
 readonly MYSQL_PASSWORD=root
+
+readonly KEY="/home/minudika/Projects/WSO2/dev/resources/keys/ssh-key"
 
 
 readonly SCENARIO_PASSTHROUGH=1
@@ -102,7 +123,7 @@ download_product() {
     fi
 }
 
-build_distribution() {
+setup_distribution() {
     script_location="`dirname \"$0\"`"              # relative
     script_location="`( cd \"$script_location\" && pwd )`"  # absolutized and normalized
     if [ -z "$script_location" ] ; then
@@ -116,48 +137,56 @@ build_distribution() {
     echo "Cloning ${ARTIFACT_REPO_URL} into ${script_locatoin}.."
     git clone ${ARTIFACT_REPO_URL}
 
-    echo "Unzipping ${PRODUCT_ZIP_NAME} into 1/"
-    unzip -q ${PRODUCT_ZIP_NAME} -d distribution-1/
-    echo "Unzipping ${PRODUCT_ZIP_NAME} into 2/"
-    unzip -q ${PRODUCT_ZIP_NAME} -d distribution-2/
+    mkdir -p ${DISTRIBUTION_PATH_1}
+    mkdir -p ${DISTRIBUTION_PATH_2}
+    echo "Unzipping ${PRODUCT_ZIP_NAME} into 1/${DISTRIBUTION_NAME}"
+    unzip -q ${PRODUCT_ZIP_NAME} -d 1/${DISTRIBUTION_NAME}
+    echo "Unzipping ${PRODUCT_ZIP_NAME} into 2/${DISTRIBUTION_NAME}"
+    unzip -q ${PRODUCT_ZIP_NAME} -d 2/${DISTRIBUTION_NAME}
 
-    echo "Copying ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml into distribution-1/${PRODUCT_PACK_NAME}/conf/worker/"
-    cp ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml distribution-1/${PRODUCT_PACK_NAME}/conf/worker/
-    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into distribution-1/${PRODUCT_PACK_NAME}/lib/"
-    cp  ${ARTIFACT_REPO_NAME}/libs/* distribution-1/${PRODUCT_PACK_NAME}/lib
+    echo "Copying ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml into ${SP_PACK_PATH_1}/conf/worker/"
+    cp ${ARTIFACT_REPO_NAME}/conf/1/deployment.yaml ${SP_PACK_PATH_1}/conf/worker/
+    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into ${SP_PACK_PATH_1}/lib/"
+    cp  ${ARTIFACT_REPO_NAME}/libs/* ${SP_PACK_PATH_1}/lib
 
-    echo "Copying ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml into 2/${PRODUCT_PACK_NAME}/conf/worker/"
-    cp ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml distribution-2/${PRODUCT_PACK_NAME}
-    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into distribution-2/${PRODUCT_PACK_NAME}/lib/"
-    cp  ${ARTIFACT_REPO_NAME}/libs/* distribution-2/${PRODUCT_PACK_NAME}/lib
+    echo "Copying ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml into ${SP_PACK_PATH_2}/conf/worker/"
+    cp ${ARTIFACT_REPO_NAME}/conf/2/deployment.yaml ${SP_PACK_PATH_2}/conf/worker/
+    echo "Copying ${ARTIFACT_REPO_NAME}/libs/* into ${SP_PACK_PATH_2}/lib/"
+    cp  ${ARTIFACT_REPO_NAME}/libs/* ${SP_PACK_PATH_2}/lib
 
-    cp ${SCRIPT_REPO_NAME}/setup-sp.sh distribution-1/
-    cp ${SCRIPT_REPO_NAME}/clean.sh distribution-1/
+    cp ${SCRIPT_REPO_NAME}/setup-sp.sh ${DISTRIBUTION_PATH_1}
+    cp ${SCRIPT_REPO_NAME}/shutdown-sp.sh ${DISTRIBUTION_PATH_1}
+    cp ${SCRIPT_REPO_NAME}/clean.sh ${DISTRIBUTION_PATH_1}
 
-    cp ${SCRIPT_REPO_NAME}/setup-sp.sh distribution-2/
-    cp ${SCRIPT_REPO_NAME}/clean.sh distribution-2/
+    cp ${SCRIPT_REPO_NAME}/setup-sp.sh ${DISTRIBUTION_PATH_2}
+    cp ${SCRIPT_REPO_NAME}/shutdown-sp.sh ${DISTRIBUTION_PATH_2}
+    cp ${SCRIPT_REPO_NAME}/clean.sh ${DISTRIBUTION_PATH_2}
 
-    zip -rq distribution-1.zip distribution-1/
-    zip -rq distribution-2.zip distribution-2/
+    cd ${NODE_ID_1/
+    zip -rq ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${DISTRIBUTION_NAME}/
+    mv ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${script_location}
+    cd ${script_location}/${NODE_ID_2}
+    zip -rq ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${DISTRIBUTION_NAME}/
+    mv ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${script_location}
 
+    echo "Uploading ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip to ${REMOTE_IP1}"
+    scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
 
-}
-
-upload_product() {
-    echo "Uploading ${PRODUCT_NAME}-${PRODUCT_VERSION}.zip to ${REMOTE_SERVER_IP1}"
-    scp -i ${KEY} ${PRODUCT_ZIP_FILE_PATH} ${REMOTE_SERVER_USERNAME1}@${REMOTE_SERVER_IP1}:${REMOTE_INSTALLATION_PATH}
-
-    echo "Uploading ${PRODUCT_NAME}-${PRODUCT_VERSION}.zip to ${REMOTE_SERVER_IP12}"
-    scp -i ${KEY} ${PRODUCT_ZIP_FILE_PATH} ${REMOTE_SERVER_USERNAME1}@${REMOTE_SERVER_IP2}:${REMOTE_INSTALLATION_PATH}
+    echo "Uploading ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip to ${REMOTE_IP2}"
+    scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
 }
 
 execute_client() {
     echo "Executing client.."
-    ssh -i ${JENKINS_SSH_KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./setup-sp.sh
+    ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
+      /home/ubuntu 1000 1 1000 900000 1 1000 1 192.168.57.248 9892 ubuntu 2 192.168.57.25 9892 ubuntu\
+      /home/ubuntu/keys/ssh-key 4.3.0
+
 }
 
 main() {
-    build_distribution
+    setup_distribution
+    execute_client
 }
 
 main

@@ -21,7 +21,9 @@
 
 readonly PRODUCT_NAME=wso2sp
 readonly PRODUCT_VERSION=4.3.0
-readonly INSTALLATION_DIR=/home/ubuntu
+declare INSTALLATION_DIR="`dirname \"$0\"`"              # relative
+INSTALLATION_DIR="`( cd \"$INSTALLATION_DIR\" && pwd )`"
+
 readonly ARTIFACT_DIR="${INSTALLATION_DIR}/artifacts"
 readonly PRODUCT_HOME="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}"
 readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
