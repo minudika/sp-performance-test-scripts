@@ -124,13 +124,14 @@ clone_artifacts() {
 
 start_sever_1() {
     echo "Starting the server ${REMOTE_IP1}.."
-    echo "sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}"
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE}\
+     ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
 }
 
 start_sever_2() {
     echo "Starting the server ${REMOTE_IP2}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE} ${NODE_ID_2} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/setup-sp.sh ${SCENARIO} ${WINDOW_SIZE}\
+     ${NODE_ID_2} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
 }
 
 shutdown_server_1() {
@@ -293,6 +294,10 @@ execute_client() {
         -Dscenario=${SCENARIO}\
         -jar ${PUBLISHING_CLIENT_JAR_NAME}\
         /
+}
+
+execute_tests() {
+    per
 }
 
 

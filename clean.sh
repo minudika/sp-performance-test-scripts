@@ -45,6 +45,8 @@ clean() {
     rm -f ${SIDDHI_APP_DEPLOYMENT_DIR}/TCP_Benchmark.siddhi
     rm -rf ${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}
     rm -rf ${PRODUCT_HOME}
+    cd ../
+    rm -rf dist*
     echo "siddhi app and performance results removed from the worker."
 }
 
