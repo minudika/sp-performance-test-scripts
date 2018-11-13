@@ -20,23 +20,23 @@
 # ----------------------------------------------------------------------------
 
 
-readonly CLIENT_DIR=$1
-readonly BATCH_SIZE=$2
-readonly THREAD_COUNT=$3
-readonly INTERVAL=$4 #Time between batches
-readonly TEST_DURATION=$5
-readonly SCENARIO=$6
-readonly WINDOW_SIZE=$7
-readonly NODE_ID_1=${8}
-readonly REMOTE_IP1=${9}
-readonly PORT1=${10}
-readonly REMOTE_USERNAME1=${11}
-readonly NODE_ID_2=${12}
-readonly REMOTE_IP2=${13}
-readonly PORT2=${14}
-readonly REMOTE_USERNAME2=${15}
-readonly KEY=${16}
-readonly PRODUCT_VERSION=${17}
+args=("$@")
+readonly CLIENT_DIR=${args[0]}
+readonly BATCH_SIZE=${args[1]}
+readonly THREAD_COUNT=${args[2]}
+readonly INTERVAL=${args[3]} #Time between batches
+readonly TEST_DURATION=${args[4]}
+readonly WINDOW_SIZE=${args[5]}
+readonly NODE_ID_1=${args[6]}
+readonly REMOTE_IP1=${args[7]}
+readonly PORT1=${args[8]}
+readonly REMOTE_USERNAME1=${args[9]}
+readonly NODE_ID_2=${args[10]}
+readonly REMOTE_IP2=${args[11]}
+readonly PORT2=${args[12]}
+readonly REMOTE_USERNAME2=${args[13]}
+readonly KEY=${args[14]}
+readonly PRODUCT_VERSION=${args[15]}
 
 readonly INSTALLATION_DIR=/home/ubuntu/distribution
 readonly SCENARIO_PASSTHROUGH=1
@@ -86,6 +86,7 @@ readonly SUMMARY_FILE_NAME=summary.csv
 readonly SUMMARY_FILE_PATH=${DOWNLOAD_PATH}/summary.csv
 readonly REPORT_LOCATION=${CLIENT_DIR}/metrics
 
+readonly argLength="$#"
 
 print_parameters() {
 echo "
@@ -143,14 +144,17 @@ shutdown_server_2() {
     sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/shutdown-sp.sh
 }
 
-download_results() {
+clone_results_repo() {
     cd ${CLIENT_DIR}
     ssh_add
     git clone ${PERFORMANCE_RESULTS_REPO}
+}
+
+download_results() {
     cd ${RESULT_DIR_NAME}
     mkdir ${SCENARIO}
     echo "Downloading result set.."
-    sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:/home/ubuntu/wso2sp-4.3.0/wso2/worker/performance-results/ \
+    sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:${INSTALLATION_DIR}/wso2sp-4.3.0/wso2/worker/performance-results/ \
     ${DOWNLOAD_PATH}/${SCENARIO}
 }
 
@@ -232,10 +236,15 @@ push_results_to_git() {
     cd ${DOWNLOAD_PATH}
     current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
     git remote add origin ${PERFORMANCE_RESULTS_REPO}
-    git add -A
+    git add summary.csv
     git commit -m "${current_date_time} : Add performance results" -m "Test duration : ${TEST_DURATION}"
     echo "${current_date_time}: pushing test results to '${PERFORMANCE_RESULTS_REPO}'"
     git push -u origin master
+}
+
+compress_result_set() {
+    echo "Creating results.zip.."
+    zip -rq results.zip ${DISTRIBUTION_NAME}/
 }
 
 clean_server_1() {
@@ -269,7 +278,7 @@ while
     status_code=$(curl --write-out %{http_code} --silent --output /dev/null -X GET \
     https://${REMOTE_IP2}:${SERVER_2_HTTPS_PORT}/${SIDDHI_APP_STATUS_REST_PATH}\
      -H "accept: application/json"\
-     -u admin:admin -k -v)
+     -u admin:admin -k)
 
     sleep 1
     ((${status_code} != 200 ))
@@ -295,22 +304,114 @@ execute_client() {
         /
 }
 
+run_tests() {
+    for (( i=15; i<${argLength}; i++ ))
+    do
+        local scneario=${args[i]}
+        echo "***************************************************"
+        echo "Running performance test for scenario : ${scenario}"
+        echo "***************************************************"
+        #starting server 1
+        echo "Starting the server ${REMOTE_IP1}.."
+        echo "sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${scneario} ${WINDOW_SIZE}
+        ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}"
+        sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${scenario} ${WINDOW_SIZE} ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
+        wait_until_deploy_on_server_1
+
+        #starting server 1
+        echo "Starting the server ${REMOTE_IP2}.."
+        sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/setup-sp.sh ${scenario} ${WINDOW_SIZE} ${NODE_ID_2} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
+        wait_until_deploy_on_server_2
+
+        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
+
+        # execute java client for publishing messages
+        cd ${CLIENT_DIR}
+        cd ${PUBLISHING_CLIENT_DIR}
+        echo "[${current_date_time}] Executing tcp client.."
+        java \
+            -Dhost=${REMOTE_IP1}\
+            -Dport=${PORT1}\
+            -Dbatch.size=${BATCH_SIZE}\
+            -Dinterval=${INTERVAL}\
+            -Dduration=${TEST_DURATION}\
+            -Dthread.count=${THREAD_COUNT}\
+            -Dscenario=$scenario\
+            -jar ${PUBLISHING_CLIENT_JAR_NAME}\
+            /
+
+            #download_results
+            cd ${CLIENT_DIR}/${RESULT_DIR_NAME}
+            mkdir ${scenario}
+            echo "Downloading result set.."
+            sudo scp -r -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}:${INSTALLATION_DIR}/wso2sp-4.3.0/wso2/worker/performance-results/ \
+            ${DOWNLOAD_PATH}/${scenario}
+
+            #summarize results
+            sudo chmod 755 ${DOWNLOAD_PATH}
+            case ${scenario} in
+                ${SCENARIO_PASSTHROUGH})
+                    scenario_name="Simple Passthrough";;
+                ${SCENARIO_FILTER})
+                    scenario_name="Filter";;
+                ${SCENARIO_PATTERNS})
+                    scenario_name="Patterns";;
+                ${SCENARIO_PARTITIONS})
+                    scenario_name="Partitions";;
+                ${SCENARIO_WINDOW_LARGE})
+                    scenario_name="Large Window";;
+                ${SCENARIO_WINDOW_SMALL})
+                    scenario_name="Small Window";;
+                ${SCENARIO_PERSISTENCE_MYSQL_INSERT})
+                    scenario_name="MySQL Insert";;
+                ${SCENARIO_PERSISTENCE_MYSQL_UPDATE})
+                    scenario_name="MySQL Insert or Update";;
+                ${SCENARIO_PERSISTENCE_MSSQL_INSERT})
+                    scenario_name="MSSQL Insert";;
+                ${SCENARIO_PERSISTENCE_MSSQL_UPDATE})
+                    scenario_name="MSSQL Insert or Update";;
+                ${SCENARIO_PERSISTENCE_ORACLE_INSERT})
+                    scenario_name="OracleDB Insert";;
+                ${SCENARIO_PERSISTENCE_ORACLE_UPDATE})
+                    scenario_name="OracleDB Update";;
+            esac
+
+            create_summary_file
+            get_server_metrics
+
+            avgValues=$(tail -2 ${REPORT_LOCATION}/${REMOTE_IP1}_loadavg.txt | head -1)
+
+            loadAvgs=( $avgValues )
+            echo "Summarizing performance results of ${scenario_name} test.."
+            while IFS=, read -r col0 col1 col2 col3 col4 col5 col6 col7 col8 col9 col10 col11 col12 col13
+            do
+                value="${scenario_name},${BATCH_SIZE},${WINDOW_SIZE},${col3},${col4},${col2},${col7},${col8},${col9},${col10},\
+                ${loadAvgs[3]},${loadAvgs[4]},${loadAvgs[5]}"
+            done < <(tail -n 1 ${DOWNLOAD_PATH}/${scenario}/${PERFORMANCE_RESULTS}/${PERFORMANCE_RESULTS_FILE_NAME})
+
+            echo ${value} >> ${SUMMARY_FILE_PATH}
+
+            clean_server_1
+            clean_server_2
+    done
+}
 
 main() {
    print_parameters
    clone_artifacts
-   start_sever_1
-   wait_until_deploy_on_server_1
-   start_sever_2
-   wait_until_deploy_on_server_2
-   execute_client
-   shutdown_server_1
-   shutdown_server_2
-   download_results
-   summarize
+   clone_results_repo
+#   start_sever_1
+#   wait_until_deploy_on_server_1
+#   start_sever_2
+#   wait_until_deploy_on_server_2
+#   execute_client
+#   shutdown_server_1
+#   shutdown_server_2
+#   download_results
+    run_tests
    push_results_to_git
-   clean_server_1
-   clean_server_2
+   zip_downloaded_results
+
 }
 
 main
