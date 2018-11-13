@@ -25,12 +25,13 @@
 
 readonly PRODUCT_NAME=wso2sp
 readonly PRODUCT_VERSION=4.3.0
-readonly INSTALLATION_DIR=/home/ubuntu
+readonly INSTALLATION_DIR=/home/ubuntu/distribution
 readonly ARTIFACT_DIR="${INSTALLATION_DIR}/artifacts"
 readonly PRODUCT_HOME="${INSTALLATION_DIR}/${PRODUCT_NAME}-${PRODUCT_VERSION}"
 readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
 
 readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
+readonly PERFORMANCE_RESULT_DIR="${PRODUCT_HOME}/wso2/worker/performance-results"
 readonly SP_LIB_DIR="${PRODUCT_HOME}/lib"
 
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
@@ -43,10 +44,7 @@ readonly LIB_DIR="${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}/libs"
 
 clean() {
     rm -f ${SIDDHI_APP_DEPLOYMENT_DIR}/TCP_Benchmark.siddhi
-    rm -rf ${INSTALLATION_DIR}/${ARTIFACT_REPO_NAME}
-    rm -rf ${PRODUCT_HOME}
-    cd ../
-    rm -rf dist*
+    rm -rf ${PERFORMANCE_RESULT_DIR}
     echo "siddhi app and performance results removed from the worker."
 }
 
