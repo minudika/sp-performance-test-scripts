@@ -64,7 +64,7 @@ readonly SP_PACK_PATH_1=${DISTRIBUTION_PATH_1}/${PRODUCT_PACK_NAME}
 readonly SP_PACK_PATH_2=${DISTRIBUTION_PATH_2}/${PRODUCT_PACK_NAME}
 
 readonly REMOTE_INSTALLATION_PATH=/home/ubuntu
-readonly RESULTS_ZIP_NAME="results.zip"
+readonly RESULTS_ZIP_NAME="sp-performance-test-results.zip"
 
 readonly MYSQL_USERNAME=root
 readonly MYSQL_PASSWORD=root
@@ -161,10 +161,6 @@ setup_distribution() {
     echo "Uploading client.sh to ${REMOTE_CLIENT_IP}"
     sudo scp -i ${KEY} ${SCRIPT_REPO_NAME}/client.sh\
      ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}
-
-    echo "Downloading performance results to Jenkins.."
-    sudo scp -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}/${RESULTS_ZIP_NAME}\
-    ${script_location}
 }
 
 execute_client() {
@@ -173,6 +169,11 @@ execute_client() {
       ${CLIENT_DIR} ${BATCH_SIZE} ${THREAD_COUNT} ${INTERVAL} ${TEST_DURATION} ${WINDOW_SIZE} ${NODE_ID_1}\
       ${REMOTE_IP1} ${PORT1} ${REMOTE_USERNAME1} ${NODE_ID_2} ${REMOTE_IP2} ${PORT2} ${REMOTE_USERNAME2} ${CLIENT_KEY}\
       ${PRODUCT_VERSION} ${SCENARIOS}
+
+    sleep 5
+    echo "Downloading performance results to Jenkins.."
+    sudo scp -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}/${RESULTS_ZIP_NAME}\
+    ${script_location}
 }
 
 main() {
