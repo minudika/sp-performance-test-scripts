@@ -147,6 +147,8 @@ clone_results_repo() {
     cd ${CLIENT_DIR}
     ssh_add
     git clone ${PERFORMANCE_RESULTS_REPO}
+    cd ${RESULT_DIR_NAME}
+    rm -f ${SUMMARY_FILE_NAME}
 }
 
 download_results() {
