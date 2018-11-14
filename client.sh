@@ -21,6 +21,8 @@
 
 
 args=("$@")
+readonly argLength="$#"
+
 readonly CLIENT_DIR=${args[0]}
 readonly BATCH_SIZE=${args[1]}
 readonly THREAD_COUNT=${args[2]}
@@ -86,8 +88,6 @@ readonly SUMMARY_FILE_NAME=summary.csv
 readonly SUMMARY_FILE_PATH=${DOWNLOAD_PATH}/summary.csv
 readonly REPORT_LOCATION=${CLIENT_DIR}/metrics
 
-readonly argLength="$#"
-
 print_parameters() {
 echo "
 1. Client home : ${CLIENT_DIR}
@@ -95,18 +95,17 @@ echo "
 3. Thread count : ${THREAD_COUNT}
 4. Interval : ${INTERVAL}
 5. Test duration : ${TEST_DURATION}
-6. Scenario : ${SCENARIO}
-7. Window size : ${WINDOW_SIZE}
-8. Node id 1 : ${NODE_ID_1}
-9. REMOTE IP 1 : ${REMOTE_IP1}
-10. PORT 1 : ${PORT1}
-11. REMOTE_USERNAME 1: ${REMOTE_USERNAME1}
-12. Node id 2 : ${NODE_ID_2}
-13. REMOTE IP 2: ${REMOTE_IP2}
-14. PORT 2 : ${PORT2}
-15. REMOTE_USERNAME 2: ${REMOTE_USERNAME2}
-16. KEY : ${KEY}
-17. Product version : ${PRODUCT_VERSION}
+6. Window size : ${WINDOW_SIZE}
+7. Node id 1 : ${NODE_ID_1}
+8. REMOTE IP 1 : ${REMOTE_IP1}
+9. PORT 1 : ${PORT1}
+10. REMOTE_USERNAME 1: ${REMOTE_USERNAME1}
+11. Node id 2 : ${NODE_ID_2}
+12. REMOTE IP 2: ${REMOTE_IP2}
+13. PORT 2 : ${PORT2}
+14. REMOTE_USERNAME 2: ${REMOTE_USERNAME2}
+15. KEY : ${KEY}
+16. Product version : ${PRODUCT_VERSION}
 "
 }
 
@@ -305,16 +304,15 @@ execute_client() {
 }
 
 run_tests() {
-    for (( i=15; i<${argLength}; i++ ))
+    for (( i=16 ; i<${argLength}; i++ ))
     do
-        local scneario=${args[i]}
+        local scenario=${args[i]}
         echo "***************************************************"
         echo "Running performance test for scenario : ${scenario}"
         echo "***************************************************"
         #starting server 1
         echo "Starting the server ${REMOTE_IP1}.."
-        echo "sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${scneario} ${WINDOW_SIZE}
-        ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}"
+        echo "sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${scenario} ${WINDOW_SIZE} ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}"
         sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/setup-sp.sh ${scenario} ${WINDOW_SIZE} ${NODE_ID_1} ${INSTALLATION_DIR} ${PRODUCT_VERSION}
         wait_until_deploy_on_server_1
 
@@ -393,7 +391,7 @@ run_tests() {
 
             clean_server_1
             clean_server_2
-    done
+        done
 }
 
 main() {
