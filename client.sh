@@ -248,12 +248,12 @@ compress_result_set() {
 
 clean_server_1() {
     echo "Removing performance results and siddhi apps from worker ${REMOTE_IP1}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./clean.sh
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1} ./distribution/clean.sh
 }
 
 clean_server_2() {
     echo "Removing performance results and siddhi apps from worker ${REMOTE_IP2}.."
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./clean.sh
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2} ./distribution/clean.sh
 }
 
 wait_until_deploy_on_server_1() {
