@@ -20,26 +20,30 @@
 # ----------------------------------------------------------------------------
 
 readonly PRODUCT_NAME=wso2sp
-readonly PRODUCT_VERSION=4.3.0
 readonly JAVA_HOME_PATH="/usr/lib/jvm/java-8-oracle"
 readonly PRODUCT_DOWNLOAD_URL="https://github.com/wso2/product-sp/releases/download/v${PRODUCT_VERSION}/wso2sp-4.3.0.zip"
 
 
-readonly NODE_ID_1=1
-readonly REMOTE_IP1=192.168.57.248
-readonly REMOTE_USERNAME1=ubuntu
-readonly NODE_ID_2=2
-readonly REMOTE_IP2=192.168.57.25
-readonly REMOTE_USERNAME2=ubuntu
-readonly REMOTE_CLIENT_IP=192.168.57.95
-readonly REMOTE_CLIENT_USERNAME=ubuntu
-
-# databases
-readonly WSO2_UM_DB="WSO2_UM_DB"
-readonly WSO2_REG_DB="WSO2_REG_DB"
-readonly WSO2_ANALYTICS_EVENT_STORE="WSO2_ANALYTICS_EVENT_STORE_DB"
-readonly WSO2_ANALYTICS_PROCESSED_DATA_STORE="WSO2_ANALYTICS_PROCESSED_DATA_STORE_DB"
-readonly WSO2_AM_STATS_DB="WSO2_AM_STATS_DB"
+args=("$@")
+readonly CLIENT_DIR=${args[0]}
+readonly BATCH_SIZE=${args[1]}
+readonly THREAD_COUNT=${args[2]}
+readonly INTERVAL=${args[3]} #Time between batches
+readonly TEST_DURATION=${args[4]}
+readonly WINDOW_SIZE=${args[5]}
+readonly NODE_ID_1=${args[6]}
+readonly REMOTE_IP1=${args[7]}
+readonly PORT1=${args[8]}
+readonly REMOTE_USERNAME1=${args[9]}
+readonly NODE_ID_2=${args[10]}
+readonly REMOTE_IP2=${args[11]}
+readonly PORT2=${args[12]}
+readonly REMOTE_USERNAME2=${args[13]}
+readonly REMOTE_CLIENT_IP=${args[14]}
+readonly REMOTE_CLIENT_USERNAME=${args[15]}
+readonly CLIENT_KEY=${args[16]}
+readonly PRODUCT_VERSION=${args[17]}
+readonly SCENARIOS=${args[18]}
 
 readonly SIDDHI_APP_DEPLOYMENT_DIR="${PRODUCT_HOME}/wso2/worker/deployment/siddhi-files"
 readonly SP_CONF_DIR=${PRODUCT_NAME}-${PRODUCT_VERSION}/conf/worker/
@@ -47,8 +51,6 @@ readonly SP_LIB_DIR="${PRODUCT_HOME}/lib"
 
 readonly ARTIFACT_REPO_NAME="sp-performance-test-resources"
 readonly ARTIFACT_REPO_URL="https://github.com/minudika/${ARTIFACT_REPO_NAME}"
-
-
 readonly SCRIPT_REPO_URL="git@github.com:minudika/sp-performance-test-scripts.git"
 readonly SCRIPT_REPO_NAME="sp-performance-test-scripts"
 
@@ -61,16 +63,13 @@ readonly DISTRIBUTION_PATH_2=${NODE_ID_2}/${DISTRIBUTION_NAME}
 readonly SP_PACK_PATH_1=${DISTRIBUTION_PATH_1}/${PRODUCT_PACK_NAME}
 readonly SP_PACK_PATH_2=${DISTRIBUTION_PATH_2}/${PRODUCT_PACK_NAME}
 
-
-
 readonly REMOTE_INSTALLATION_PATH=/home/ubuntu
-
+readonly RESULTS_ZIP_NAME="results.zip"
 
 readonly MYSQL_USERNAME=root
 readonly MYSQL_PASSWORD=root
 
 readonly KEY="/home/minudika/Projects/WSO2/dev/resources/keys/ssh-key"
-
 
 readonly SCENARIO_PASSTHROUGH=1
 readonly SCENARIO_FILTER=2
@@ -93,10 +92,10 @@ download_product() {
 }
 
 setup_distribution() {
-    script_location="`dirname \"$0\"`"              # relative
-    script_location="`( cd \"$script_location\" && pwd )`"  # absolutized and normalized
+    script_location="`dirname \"$0\"`"
+    script_location="`( cd \"$script_location\" && pwd )`"
     if [ -z "$script_location" ] ; then
-        exit 1  # fail
+        exit 1
     fi
     cd ${script_location}
 
@@ -148,22 +147,31 @@ setup_distribution() {
     ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
 
     echo "Extracting ${DISTRIBUTION_NAME} in ${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}"
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}  "unzip ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip"
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME1}@${REMOTE_IP1}  "unzip -q ${DISTRIBUTION_NAME}-${NODE_ID_1}.zip"
 
     echo "Uploading ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip to ${REMOTE_IP2}"
     sudo scp -i ${KEY} ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip \
-    ${REMOTE_USERNAME1}@${REMOTE_IP1}:${REMOTE_INSTALLATION_PATH}
+    ${REMOTE_USERNAME2}@${REMOTE_IP2}:${REMOTE_INSTALLATION_PATH}
 
     echo "Extracting ${DISTRIBUTION_NAME} in ${REMOTE_IP2}:${REMOTE_INSTALLATION_PATH}"
-    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2}  "unzip ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip"
+    sudo ssh -i ${KEY} ${REMOTE_USERNAME2}@${REMOTE_IP2}  "unzip -q ${DISTRIBUTION_NAME}-${NODE_ID_2}.zip"
+
+    cd ${script_location}
+
+    echo "Uploading client.sh to ${REMOTE_CLIENT_IP}"
+    sudo scp -i ${KEY} ${SCRIPT_REPO_NAME}/client.sh\
+     ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}
+
+    sudo scp -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}/${RESULTS_ZIP_NAME}\
+    ${script_location}
 }
 
 execute_client() {
     echo "Executing client.."
-    sudo ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
-      /home/ubuntu 1000 1 1000 900000 1 1000 1 192.168.57.248 9892 ubuntu 2 192.168.57.25 9892 ubuntu\
-      /home/ubuntu/keys/ssh-key 4.3.0
-
+      sudo ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
+      ${CLIENT_DIR} ${BATCH_SIZE} ${THREAD_COUNT} ${INTERVAL} ${TEST_DURATION} ${WINDOW_SIZE} ${NODE_ID_1}\
+      ${REMOTE_IP1} ${PORT1} ${REMOTE_USERNAME1} ${NODE_ID_2} ${REMOTE_IP2} ${PORT2} ${REMOTE_USERNAME2} ${CLIENT_KEY}\
+      ${PRODUCT_VERSION} ${SCENARIOS}
 }
 
 main() {
