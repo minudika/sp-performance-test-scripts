@@ -162,6 +162,7 @@ setup_distribution() {
     sudo scp -i ${KEY} ${SCRIPT_REPO_NAME}/client.sh\
      ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}
 
+    echo "Downloading performance results to Jenkins.."
     sudo scp -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}/${RESULTS_ZIP_NAME}\
     ${script_location}
 }
