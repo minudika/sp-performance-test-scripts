@@ -91,7 +91,15 @@ download_product() {
     fi
 }
 
-setup_distribution() {
+execute_client() {
+    echo "Executing client.."
+      sudo ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
+      ${CLIENT_DIR} ${BATCH_SIZE} ${THREAD_COUNT} ${INTERVAL} ${TEST_DURATION} ${WINDOW_SIZE} ${NODE_ID_1}\
+      ${REMOTE_IP1} ${PORT1} ${REMOTE_USERNAME1} ${NODE_ID_2} ${REMOTE_IP2} ${PORT2} ${REMOTE_USERNAME2} ${CLIENT_KEY}\
+      ${PRODUCT_VERSION} ${SCENARIOS}
+}
+
+run_tests() {
     script_location="`dirname \"$0\"`"
     script_location="`( cd \"$script_location\" && pwd )`"
     if [ -z "$script_location" ] ; then
@@ -161,14 +169,10 @@ setup_distribution() {
     echo "Uploading client.sh to ${REMOTE_CLIENT_IP}"
     sudo scp -i ${KEY} ${SCRIPT_REPO_NAME}/client.sh\
      ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP}:${REMOTE_INSTALLATION_PATH}
-}
 
-execute_client() {
-    echo "Executing client.."
-      sudo ssh -i ${KEY} ${REMOTE_CLIENT_USERNAME}@${REMOTE_CLIENT_IP} ./client.sh\
-      ${CLIENT_DIR} ${BATCH_SIZE} ${THREAD_COUNT} ${INTERVAL} ${TEST_DURATION} ${WINDOW_SIZE} ${NODE_ID_1}\
-      ${REMOTE_IP1} ${PORT1} ${REMOTE_USERNAME1} ${NODE_ID_2} ${REMOTE_IP2} ${PORT2} ${REMOTE_USERNAME2} ${CLIENT_KEY}\
-      ${PRODUCT_VERSION} ${SCENARIOS}
+    sleep 1
+
+    execute_client
 
     sleep 5
     echo "Downloading performance results to Jenkins.."
@@ -177,8 +181,7 @@ execute_client() {
 }
 
 main() {
-    setup_distribution
-    execute_client
+    run_tests
 }
 
 main
